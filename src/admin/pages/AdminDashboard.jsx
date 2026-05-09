@@ -6,7 +6,10 @@ import {
   CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from 'recharts';
 
+
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+/* ── Stat card component ── */
 
 /* ── Stat card component ── */
 function StatCard({ label, value, icon, color, loading }) {
@@ -27,6 +30,8 @@ function StatCard({ label, value, icon, color, loading }) {
 }
 
 /* ── Status badge component ── */
+
+/* ── Status badge component ── */
 function Badge({ status }) {
   const map = {
     pending:   'bg-blue-100 text-blue-700',
@@ -42,10 +47,17 @@ function Badge({ status }) {
   );
 }
 
+
 export default function AdminDashboard() {
   const [stats, setStats] = useState({ active: 0, completed: 0, lowStock: 0, revenue: 0 });
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => { 
+    loadDashboardData(); 
+  }, []);
+
+  const loadDashboardData = async () => {
 
   useEffect(() => { 
     loadDashboardData(); 
@@ -83,11 +95,13 @@ export default function AdminDashboard() {
     return { day, orders: dayOrders.length };
   });
 
+
   const barData = DAYS.map((day, i) => ({
     day,
     completed: orders.filter(o => o.status === 'completed' && new Date(o.created_at).getDay() === i).length,
     cancelled: orders.filter(o => o.status === 'cancelled' && new Date(o.created_at).getDay() === i).length,
   }));
+
 
   return (
     /* AdminLayout should ideally use min-h-screen */
@@ -194,4 +208,4 @@ export default function AdminDashboard() {
       </div>
     </AdminLayout>
   );
-}
+  }}

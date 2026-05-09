@@ -1,7 +1,10 @@
 import { useState, useEffect } from 'react';
 import AdminLayout from '../layouts/AdminLayout';
 import { inventoryAPI, menuAPI } from '../../services/api'; 
+import { inventoryAPI, menuAPI } from '../../services/api'; 
 import toast from 'react-hot-toast';
+import { MdHistory, MdExposure, MdClose, MdInventory2 } from 'react-icons/md';
+import { motion, AnimatePresence } from 'framer-motion';
 import { MdHistory, MdExposure, MdClose, MdInventory2 } from 'react-icons/md';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -20,7 +23,9 @@ export default function AdminInventory() {
   const [processing, setProcessing] = useState(false);
 
   useEffect(() => { loadItems(); }, []);
+  useEffect(() => { loadItems(); }, []);
 
+  const loadItems = async () => {
   const loadItems = async () => {
     try {
       setLoading(true);

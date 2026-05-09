@@ -28,6 +28,7 @@ export default function AdminReports() {
 
   const completed = orders.filter(o => o.status === 'completed');
   const totalRev  = completed.reduce((s, o) => s + (o.total_amount || 0), 0);
+  const totalRev  = completed.reduce((s, o) => s + (o.total_amount || 0), 0);
   const avgOrder  = completed.length ? Math.round(totalRev / completed.length) : 0;
 
   /* Weekly data */
@@ -143,37 +144,7 @@ orders.forEach(o => {
       {/* Bottom row */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
 
-        {/* Payment pie */}
-        <div className="bg-white rounded-2xl shadow-sm p-5">
-          <h2 className="text-lg font-bold text-[#464255] mb-4">Payment Methods</h2>
-          {pieData.length === 0
-            ? <p className="text-center text-gray-400 py-8 text-sm">No data</p>
-            : (
-              <div className="flex items-center gap-6">
-                <ResponsiveContainer width={160} height={160}>
-                  <PieChart>
-                    <Pie data={pieData} cx="50%" cy="50%" innerRadius={40} outerRadius={70}
-                         dataKey="value" nameKey="name">
-                      {pieData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
-                    </Pie>
-                    <Tooltip contentStyle={{ borderRadius: 10, fontSize: 12 }} />
-                  </PieChart>
-                </ResponsiveContainer>
-                <div className="flex flex-col gap-2">
-                  {pieData.map((p, i) => (
-                    <div key={i} className="flex items-center gap-2 text-sm">
-                      <div className="w-3 h-3 rounded-full flex-shrink-0"
-                           style={{ background: COLORS[i % COLORS.length] }} />
-                      <span className="capitalize text-gray-700">{p.name}:</span>
-                      <span className="font-semibold text-gray-900">{p.value}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )
-          }
-        </div>
-
+       
         {/* Status breakdown */}
         <div className="bg-white rounded-2xl shadow-sm p-5">
           <h2 className="text-lg font-bold text-[#464255] mb-4">Order Status Breakdown</h2>
