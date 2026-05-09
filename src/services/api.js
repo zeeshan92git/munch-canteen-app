@@ -161,6 +161,14 @@ export const orderAPI = {
     api.post(`/orders/${order_id}/cancel`),
 };
 
+export const notifAPI = {
+
+  getAll:   () => api.get('/notifications'),
+
+  markRead: () => api.post('/notifications/mark-read'),
+
+};
+
  
 /* ── Admin Specific APIs ── */
 export const adminOrderAPI = {

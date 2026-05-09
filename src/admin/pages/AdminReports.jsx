@@ -28,7 +28,6 @@ export default function AdminReports() {
 
   const completed = orders.filter(o => o.status === 'completed');
   const totalRev  = completed.reduce((s, o) => s + (o.total_amount || 0), 0);
-  const totalRev  = completed.reduce((s, o) => s + (o.total_amount || 0), 0);
   const avgOrder  = completed.length ? Math.round(totalRev / completed.length) : 0;
 
   /* Weekly data */

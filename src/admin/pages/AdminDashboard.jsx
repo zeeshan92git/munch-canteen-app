@@ -6,10 +6,7 @@ import {
   CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from 'recharts';
 
-
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-
-/* ── Stat card component ── */
 
 /* ── Stat card component ── */
 function StatCard({ label, value, icon, color, loading }) {
@@ -30,8 +27,6 @@ function StatCard({ label, value, icon, color, loading }) {
 }
 
 /* ── Status badge component ── */
-
-/* ── Status badge component ── */
 function Badge({ status }) {
   const map = {
     pending:   'bg-blue-100 text-blue-700',
@@ -47,17 +42,10 @@ function Badge({ status }) {
   );
 }
 
-
 export default function AdminDashboard() {
   const [stats, setStats] = useState({ active: 0, completed: 0, lowStock: 0, revenue: 0 });
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
-
-  useEffect(() => { 
-    loadDashboardData(); 
-  }, []);
-
-  const loadDashboardData = async () => {
 
   useEffect(() => { 
     loadDashboardData(); 
@@ -95,21 +83,17 @@ export default function AdminDashboard() {
     return { day, orders: dayOrders.length };
   });
 
-
   const barData = DAYS.map((day, i) => ({
     day,
     completed: orders.filter(o => o.status === 'completed' && new Date(o.created_at).getDay() === i).length,
     cancelled: orders.filter(o => o.status === 'cancelled' && new Date(o.created_at).getDay() === i).length,
   }));
 
-
   return (
-    /* AdminLayout should ideally use min-h-screen */
     <AdminLayout title="Dashboard">
-      {/* Removed "max-w" constraints to ensure edge-to-edge desktop coverage */}
       <div className="w-full min-h-[calc(100vh-64px)] p-6 lg:p-10 bg-[#F9F9F9]">
         
-        {/* Stat Cards - Grid expands to full width */}
+        {/* Stat Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 mb-10">
           <StatCard label="Active Orders" value={stats.active} icon="📋" color="bg-[#E7F7F2] text-[#00B074]" loading={loading} />
           <StatCard label="Completed" value={stats.completed} icon="✅" color="bg-[#E7ECF7] text-[#2D9CDB]" loading={loading} />
@@ -117,7 +101,7 @@ export default function AdminDashboard() {
           <StatCard label="Revenue" value={`Rs ${stats.revenue.toLocaleString()}`} icon="💰" color="bg-[#FFE7E6] text-[#FF5B5B]" loading={loading} />
         </div>
 
-        {/* Charts Section - 2/3 and 1/3 split */}
+        {/* Charts Section */}
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-8 mb-10">
           <div className="xl:col-span-2 bg-white rounded-[20px] p-8 shadow-sm border border-gray-50 flex flex-col">
             <h2 className="text-xl font-extrabold text-[#464255] mb-1">Order Analytics</h2>
@@ -159,7 +143,7 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        {/* Recent Transactions Table - Spans full width */}
+        {/* Recent Transactions Table */}
         <div className="bg-white rounded-[20px] shadow-sm border border-gray-50 overflow-hidden mb-10">
           <div className="p-8 flex justify-between items-center bg-white">
             <h2 className="text-xl font-extrabold text-[#464255]">Recent Transactions</h2>
@@ -179,8 +163,12 @@ export default function AdminDashboard() {
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {loading ? (
-                   Array(5).fill(0).map((_, i) => (
-                    <tr key={i} className="animate-pulse"><td colSpan="4" className="px-10 py-6"><div className="h-5 bg-gray-100 rounded w-full"></div></td></tr>
+                  Array(5).fill(0).map((_, i) => (
+                    <tr key={i} className="animate-pulse">
+                      <td colSpan="4" className="px-10 py-6">
+                        <div className="h-5 bg-gray-100 rounded w-full"></div>
+                      </td>
+                    </tr>
                   ))
                 ) : orders.slice(0, 10).map((order) => (
                   <tr key={order.id} className="hover:bg-gray-50/50 transition-all cursor-default">
@@ -208,4 +196,4 @@ export default function AdminDashboard() {
       </div>
     </AdminLayout>
   );
-  }}
+}

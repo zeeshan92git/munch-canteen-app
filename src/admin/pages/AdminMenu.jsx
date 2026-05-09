@@ -10,7 +10,6 @@ const EMPTY = { name: '', description: '', price: '', category_id: '', image_url
 
 export default function AdminMenu() {
   const [items, setItems] = useState([]);
-  const [items, setItems] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
