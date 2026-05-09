@@ -1,0 +1,66 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+  body {
+    font-family: 'Poppins', sans-serif;
+    background-color: #f8f8f4;
+    margin: 0;
+    padding: 0;
+    -webkit-tap-highlight-color: transparent;
+  }
+  #root {
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    background-color: #f0f0ec;
+  }
+}
+
+@layer components {
+  .app-container {
+    @apply w-full max-w-md min-h-screen bg-white relative overflow-x-hidden;
+  }
+  .btn-primary {
+    @apply bg-primary-600 text-white font-semibold rounded-lg px-6 py-3 w-full 
+           hover:bg-primary-700 active:bg-primary-800 transition-colors duration-200;
+  }
+  .btn-secondary {
+    @apply border-2 border-primary-600 text-primary-600 font-semibold rounded-lg px-6 py-3 
+           hover:bg-primary-50 active:bg-primary-100 transition-colors duration-200;
+  }
+  .input-field {
+    @apply w-full border border-[#41337a] rounded-xl px-4 py-3 text-base font-normal
+           text-neutral-900 placeholder:text-[#aeaeb2] focus:outline-none 
+           focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all;
+  }
+  .card {
+    @apply bg-neutral-100 rounded-2xl overflow-hidden;
+  }
+  .bottom-nav {
+    @apply fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md 
+           bg-neutral-100 border-t border-neutral-200 z-50;
+  }
+  .screen-title {
+    @apply text-2xl font-semibold text-neutral-900;
+  }
+  .price-text {
+    @apply text-lg font-bold text-neutral-900;
+  }
+  .item-name {
+    @apply text-sm font-medium text-neutral-900;
+  }
+  .star-rating {
+    @apply text-xs text-neutral-700;
+  }
+}
+
+/* custom scrollbar */
+::-webkit-scrollbar { width: 0; height: 0; }
+
+/* smooth scroll */
+html { scroll-behavior: smooth; }
