@@ -27,36 +27,39 @@ export default function AdminReports() {
   };
 
   const completed = orders.filter(o => o.status === 'completed');
-  const totalRev  = completed.reduce((s, o) => s + (o.total || 0), 0);
+  const totalRev  = completed.reduce((s, o) => s + (o.total_amount || 0), 0);
   const avgOrder  = completed.length ? Math.round(totalRev / completed.length) : 0;
 
   /* Weekly data */
   const weekData = DAYS.map((day, i) => {
-    const d  = orders.filter(o => new Date(o.created_at).getDay() === i);
-    const cd = d.filter(o => o.status === 'completed');
-    return {
-      day,
-      orders:    d.length,
-      revenue:   cd.reduce((s, o) => s + (o.total || 0), 0),
-      completed: cd.length,
-      cancelled: d.filter(o => o.status === 'cancelled').length,
-    };
-  });
+  const d  = orders.filter(o => new Date(o.created_at).getDay() === i);
+  const cd = d.filter(o => o.status === 'completed');
+  return {
+    day,
+    orders:    d.length,
+    revenue:   cd.reduce((s, o) => s + (o.total_amount || 0), 0), // Fixed field name
+    completed: cd.length,
+    cancelled: d.filter(o => o.status === 'cancelled').length,
+  };
+});
 
   /* Monthly data */
   const monthData = MONTHS.map((m, i) => {
-    const d  = orders.filter(o => new Date(o.created_at).getMonth() === i);
-    const cd = d.filter(o => o.status === 'completed');
-    return {
-      month: m,
-      orders:  d.length,
-      revenue: cd.reduce((s, o) => s + (o.total || 0), 0),
-    };
-  });
+  const d  = orders.filter(o => new Date(o.created_at).getMonth() === i);
+  const cd = d.filter(o => o.status === 'completed');
+  return {
+    month: m,
+    orders:  d.length,
+    revenue: cd.reduce((s, o) => s + (o.total_amount || 0), 0), // Fixed field name
+  };
+});
 
   /* Payment method breakdown */
   const payMap = {};
-  orders.forEach(o => { payMap[o.payment_method] = (payMap[o.payment_method] || 0) + 1; });
+orders.forEach(o => { 
+  const method = o.payment_method || 'Cash'; // Default to Cash if null
+  payMap[method] = (payMap[method] || 0) + 1; 
+});
   const pieData = Object.entries(payMap).map(([name, value]) => ({ name: name || 'unknown', value }));
 
   /* Status breakdown */

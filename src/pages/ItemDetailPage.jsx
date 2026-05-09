@@ -105,7 +105,7 @@ export default function ItemDetailPage() {
           <div className="flex gap-4">
             {/* Image */}
             <img
-              src={item.image || `https://via.placeholder.com/150x150?text=${encodeURIComponent(item.name)}`}
+              src={item.image_url || `https://via.placeholder.com/150x150?text=${encodeURIComponent(item.name)}`}
               alt={item.name}
               className="w-36 h-36 rounded-2xl object-cover border border-neutral-200 shadow-md flex-shrink-0"
             />

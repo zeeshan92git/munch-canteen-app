@@ -1,212 +1,179 @@
 import { useState, useEffect } from 'react';
 import AdminLayout from '../layouts/AdminLayout';
-import { menuAPI, inventoryAPI } from '../../services/api';
+import { inventoryAPI, menuAPI } from '../../services/api'; 
 import toast from 'react-hot-toast';
-import { MdWarning, MdClose } from 'react-icons/md';
+import { MdHistory, MdExposure, MdClose, MdInventory2 } from 'react-icons/md';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export default function AdminInventory() {
-  const [items,    setItems]    = useState([]);
-  const [loading,  setLoading]  = useState(true);
-  const [adjModal, setAdjModal] = useState(null); // item
-  const [logModal, setLogModal] = useState(null); // item
-  const [qty,      setQty]      = useState('');
-  const [reason,   setReason]   = useState('');
-  const [saving,   setSaving]   = useState(false);
-  const [logs,     setLogs]     = useState([]);
-  const [logLoad,  setLogLoad]  = useState(false);
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  
+  // Modal & Form States
+  const [activeItem, setActiveItem] = useState(null);
+  const [modalType, setModalType] = useState(null); // 'adjust' or 'logs'
+  const [adjustment, setAdjustment] = useState('');
+  const [notes, setNotes] = useState('');
+  
+  // Data States
+  const [logs, setLogs] = useState([]);
+  const [processing, setProcessing] = useState(false);
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { loadItems(); }, []);
 
-  const load = async () => {
+  const loadItems = async () => {
     try {
       setLoading(true);
-      const r = await menuAPI.getItems({ limit: 200 });
-      setItems(r.data?.items || r.data || []);
-    } catch { toast.error('Failed to load inventory'); }
-    finally  { setLoading(false); }
+      const r = await menuAPI.getItems(); // Fetching the base list
+      setItems(r.data?.data || r.data || []);
+    } catch {
+      toast.error('Failed to fetch inventory list');
+    } finally {
+      setLoading(false);
+    }
   };
 
+  // Logic for: POST /api/v1/admin/inventory/{item_id}/adjust
   const handleAdjust = async (e) => {
     e.preventDefault();
-    if (!qty) { toast.error('Enter quantity'); return; }
-    const id = adjModal.id || adjModal._id;
+    if (!adjustment || !notes) return toast.error('Please fill all fields');
+
     try {
-      setSaving(true);
-      await inventoryAPI.adjust(id, Number(qty), reason);
-      toast.success('Stock adjusted');
-      setAdjModal(null); setQty(''); setReason('');
-      load();
-    } catch (e) { toast.error(e.response?.data?.message || 'Failed'); }
-    finally    { setSaving(false); }
+      setProcessing(true);
+      await inventoryAPI.adjustStock(activeItem.id, Number(adjustment), notes);
+      
+      toast.success('Stock adjusted successfully');
+      closeModals();
+      loadItems(); // Refresh quantities
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Update failed');
+    } finally {
+      setProcessing(false);
+    }
   };
 
-  const openLogs = async (item) => {
-    setLogModal(item); setLogs([]); setLogLoad(true);
+  // Logic for: GET /api/v1/admin/inventory/logs/{item_id}
+  const viewLogs = async (item) => {
+    setActiveItem(item);
+    setModalType('logs');
+    setProcessing(true);
     try {
-      const r = await inventoryAPI.getLogs(item.id || item._id);
-      setLogs(r.data || []);
-    } catch { toast.error('Failed to load logs'); }
-    finally  { setLogLoad(false); }
+      const r = await inventoryAPI.getLogs(item.id);
+      setLogs(r.data?.data || r.data || []);
+    } catch {
+      toast.error('Failed to load history');
+    } finally {
+      setProcessing(false);
+    }
   };
 
-  const lowItems = items.filter(i => typeof (i.stock ?? i.quantity) === 'number' && (i.stock ?? i.quantity) <= 5);
+  const closeModals = () => {
+    setActiveItem(null);
+    setModalType(null);
+    setAdjustment('');
+    setNotes('');
+    setLogs([]);
+  };
 
   return (
-    <AdminLayout title="Inventory">
+    <AdminLayout title="Inventory Management">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        {loading ? (
+          <div className="col-span-full py-20 text-center font-bold text-gray-400">Loading...</div>
+        ) : items.map(item => (
+          <div key={item.id} className="bg-white rounded-[2rem] p-6 border border-gray-100 shadow-sm">
+            <div className="flex justify-between items-start mb-6">
+              <div>
+                <h3 className="font-bold text-gray-900">{item.name}</h3>
+                <p className="text-[10px] text-primary-500 font-black uppercase">{item.category?.name}</p>
+              </div>
+              <div className="text-right">
+                <span className="text-[9px] font-bold text-gray-400 uppercase block">In Stock</span>
+                <span className="text-xl font-black text-gray-800">{item.stock_quantity}</span>
+              </div>
+            </div>
 
-      {/* Low stock alert */}
-      {lowItems.length > 0 && (
-        <div className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-5">
-          <MdWarning size={22} className="text-amber-500 flex-shrink-0" />
-          <p className="text-sm font-medium text-amber-700">
-            <strong>{lowItems.length}</strong> item{lowItems.length > 1 ? 's are' : ' is'} running low on stock.
-          </p>
-        </div>
-      )}
-
-      <div className="card overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50 border-b border-gray-100">
-              <tr>
-                {['Item','Category','Price','Stock','Availability','Actions'].map(h => (
-                  <th key={h} className="table-th">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {loading
-                ? Array(8).fill(0).map((_,i) => (
-                    <tr key={i} className="border-b border-gray-50">
-                      {Array(6).fill(0).map((__,j) => (
-                        <td key={j} className="table-td">
-                          <div className="h-4 bg-gray-200 rounded animate-pulse" />
-                        </td>
-                      ))}
-                    </tr>
-                  ))
-                : items.map(item => {
-                    const id    = item.id || item._id;
-                    const stock = item.stock ?? item.quantity;
-                    const low   = typeof stock === 'number' && stock <= 5;
-                    return (
-                      <tr key={id}
-                          className={`border-b border-gray-50 transition-colors
-                                       ${low ? 'bg-amber-50 hover:bg-amber-100' : 'hover:bg-orange-50'}`}>
-                        <td className="table-td">
-                          <div className="flex items-center gap-3">
-                            <img
-                              src={item.image_url || `https://placehold.co/40x40?text=${encodeURIComponent(item.name[0])}`}
-                              alt={item.name}
-                              className="w-10 h-10 rounded-lg object-cover border border-gray-200 flex-shrink-0" />
-                            <span className="font-medium text-gray-900 max-w-[130px] truncate">{item.name}</span>
-                          </div>
-                        </td>
-                        <td className="table-td text-xs text-gray-500">{item.category?.name || '—'}</td>
-                        <td className="table-td font-semibold text-gray-800 whitespace-nowrap">Rs. {item.price}</td>
-                        <td className="table-td">
-                          <span className={`font-bold text-sm ${low ? 'text-red-600' : 'text-gray-800'}`}>
-                            {stock !== undefined ? stock : '—'} {low && '⚠️'}
-                          </span>
-                        </td>
-                        <td className="table-td">
-                          <span className={`badge ${item.is_available !== false
-                            ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'}`}>
-                            {item.is_available !== false ? 'Available' : 'Unavailable'}
-                          </span>
-                        </td>
-                        <td className="table-td">
-                          <div className="flex gap-2">
-                            <button onClick={() => { setAdjModal(item); setQty(''); setReason(''); }}
-                                    className="btn-primary text-xs px-3 py-1.5 rounded-lg">
-                              Adjust
-                            </button>
-                            <button onClick={() => openLogs(item)}
-                                    className="border border-gray-300 text-gray-600 text-xs font-semibold
-                                               px-3 py-1.5 rounded-lg hover:bg-gray-50 transition-colors">
-                              Logs
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })
-              }
-            </tbody>
-          </table>
-        </div>
+            <div className="flex gap-2">
+              <button 
+                onClick={() => { setActiveItem(item); setModalType('adjust'); }}
+                className="flex-1 bg-gray-900 text-white text-xs font-black py-3 rounded-2xl flex items-center justify-center gap-2"
+              >
+                <MdExposure size={18} /> ADJUST
+              </button>
+              <button 
+                onClick={() => viewLogs(item)}
+                className="px-4 bg-gray-50 text-gray-400 rounded-2xl hover:text-primary-600 transition-colors"
+              >
+                <MdHistory size={22} />
+              </button>
+            </div>
+          </div>
+        ))}
       </div>
 
-      {/* Adjust Modal */}
-      {adjModal && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-              <h2 className="text-lg font-bold text-gray-900">Adjust – {adjModal.name}</h2>
-              <button onClick={() => setAdjModal(null)}><MdClose size={22} className="text-gray-400 hover:text-gray-700" /></button>
-            </div>
-            <form onSubmit={handleAdjust} className="px-6 py-5 flex flex-col gap-4">
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">
-                  Quantity (+ to add, − to reduce)
-                </label>
-                <input type="number" placeholder="e.g. 50 or -10" value={qty}
-                       onChange={e => setQty(e.target.value)} required className="input-field" />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">Reason (optional)</label>
-                <input type="text" placeholder="e.g. Restocked from supplier" value={reason}
-                       onChange={e => setReason(e.target.value)} className="input-field" />
-              </div>
-              <div className="flex gap-3">
-                <button type="button" onClick={() => setAdjModal(null)}
-                        className="flex-1 border-2 border-gray-300 text-gray-700 font-semibold py-3
-                                   rounded-xl hover:bg-gray-50">Cancel</button>
-                <button type="submit" disabled={saving}
-                        className="flex-1 btn-primary justify-center py-3 rounded-xl">
-                  {saving && <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />}
-                  Save
-                </button>
-              </div>
-            </form>
+      {/* Adjust Stock Modal */}
+      <AnimatePresence>
+        {modalType === 'adjust' && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={closeModals} className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+            <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ scale: 0.95 }} className="relative bg-white w-full max-w-md rounded-[2.5rem] p-8 shadow-2xl">
+              <h2 className="text-xl font-black mb-1">Adjust Stock</h2>
+              <p className="text-sm text-gray-400 mb-6">{activeItem?.name}</p>
+
+              <form onSubmit={handleAdjust} className="space-y-4">
+                <input 
+                  type="number" placeholder="Adjustment (+10 or -5)" 
+                  value={adjustment} onChange={e => setAdjustment(e.target.value)}
+                  className="w-full bg-gray-50 border-2 border-gray-100 rounded-2xl px-5 py-4 font-bold outline-none focus:border-primary-500"
+                />
+                <input 
+                  type="text" placeholder="Reason (e.g. Daily Restock)" 
+                  value={notes} onChange={e => setNotes(e.target.value)}
+                  className="w-full bg-gray-50 border-2 border-gray-100 rounded-2xl px-5 py-4 font-bold outline-none focus:border-primary-500"
+                />
+                <div className="flex gap-3 pt-2">
+                  <button type="button" onClick={closeModals} className="flex-1 py-4 font-bold text-gray-400">Cancel</button>
+                  <button disabled={processing} className="flex-[2] bg-primary-600 text-white py-4 rounded-2xl font-black shadow-lg shadow-primary-200">
+                    {processing ? 'UPDATING...' : 'CONFIRM'}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
           </div>
-        </div>
-      )}
+        )}
+      </AnimatePresence>
 
       {/* Logs Modal */}
-      {logModal && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[80vh] overflow-hidden flex flex-col">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-              <h2 className="text-lg font-bold text-gray-900">Logs – {logModal.name}</h2>
-              <button onClick={() => setLogModal(null)}><MdClose size={22} className="text-gray-400 hover:text-gray-700" /></button>
-            </div>
-            <div className="overflow-y-auto flex-1 px-6 py-4">
-              {logLoad
-                ? <div className="flex justify-center py-8">
-                    <div className="w-8 h-8 border-4 border-primary-600 border-t-transparent rounded-full animate-spin" />
+      <AnimatePresence>
+        {modalType === 'logs' && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={closeModals} className="absolute inset-0 bg-black/60" />
+            <motion.div initial={{ y: 20 }} animate={{ y: 0 }} exit={{ y: 20 }} className="relative bg-white w-full max-w-lg rounded-[2.5rem] flex flex-col max-h-[80vh]">
+              <div className="p-8 flex justify-between items-center border-b border-gray-50">
+                <h2 className="text-xl font-black">History: {activeItem?.name}</h2>
+                <button onClick={closeModals} className="p-2 bg-gray-100 rounded-full text-gray-500"><MdClose /></button>
+              </div>
+              <div className="overflow-y-auto p-8 space-y-3">
+                {processing ? (
+                  <div className="text-center py-10 font-bold text-gray-300">Loading logs...</div>
+                ) : logs.length === 0 ? (
+                  <div className="text-center py-10 text-gray-400">No logs found.</div>
+                ) : logs.map((log, i) => (
+                  <div key={i} className="flex justify-between items-center p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                    <div>
+                      <p className="text-sm font-bold text-gray-800">{log.notes}</p>
+                      <p className="text-[10px] text-gray-400 font-bold uppercase">{new Date(log.created_at).toLocaleString()}</p>
+                    </div>
+                    <div className={`text-sm font-black px-3 py-1 rounded-xl ${log.adjustment > 0 ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
+                      {log.adjustment > 0 ? '+' : ''}{log.adjustment}
+                    </div>
                   </div>
-                : logs.length === 0
-                  ? <p className="text-center text-gray-400 py-10 text-sm">No logs found</p>
-                  : logs.map((log, i) => (
-                      <div key={i} className="flex justify-between items-start py-3 border-b border-gray-50 last:border-0">
-                        <div>
-                          <p className="text-sm font-medium text-gray-800">{log.reason || 'Manual adjustment'}</p>
-                          <p className="text-xs text-gray-400 mt-0.5">
-                            {log.created_at ? new Date(log.created_at).toLocaleString('en-PK') : '—'}
-                          </p>
-                        </div>
-                        <span className={`text-sm font-bold ml-4 flex-shrink-0
-                                          ${(log.quantity || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                          {(log.quantity || 0) >= 0 ? '+' : ''}{log.quantity}
-                        </span>
-                      </div>
-                    ))
-              }
-            </div>
+                ))}
+              </div>
+            </motion.div>
           </div>
-        </div>
-      )}
+        )}
+      </AnimatePresence>
     </AdminLayout>
   );
 }

@@ -52,7 +52,8 @@ export default function HomePage() {
         menuAPI.getPopular(),
       ]);
       setCategories(catRes.data?.data || catRes.data || []);
-      setRecommended(recRes.data?.data || recRes.data || []);
+      const recommendedData = recRes.data?.items || recRes.data?.data || recRes.data || [];
+      setRecommended(recommendedData);
       setPopular(popRes.data?.data || popRes.data || []);
     } catch (error) {
       console.error("Home data load failed", error);
@@ -182,8 +183,6 @@ export default function HomePage() {
                 <h2 className="text-xl font-semibold text-neutral-900">Recommended For You</h2>
                 <span className="text-primary-500">✦</span>
               </div>
-              <button onClick={() => navigate('/recommended')}
-                className="text-primary-600 text-sm font-medium hover:underline">→</button>
             </div>
             <div className="grid grid-cols-2 gap-3 px-4 pb-4">
               {loadingData
@@ -204,8 +203,6 @@ export default function HomePage() {
           <section className="bg-white pt-4">
             <div className="px-4 flex items-center justify-between mb-3">
               <h2 className="text-xl font-semibold text-neutral-900">Popular Items</h2>
-              <button onClick={() => navigate('/popular')}
-                className="text-primary-600 text-sm font-medium hover:underline">→</button>
             </div>
             <div className="grid grid-cols-2 gap-3 px-4 pb-6">
               {loadingData

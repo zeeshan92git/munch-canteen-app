@@ -29,13 +29,13 @@ export default function FoodCard({ item, onClick }) {
   return (
     <div
       onClick={() => onClick ? onClick(item) : navigate(`/item/${item._id}`)}
-      className="bg-neutral-100 rounded-2xl p-3 cursor-pointer hover:shadow-md 
+      className="bg-neutral-100 rounded-2xl p-3 cursor-pointer hover:shadow-md
                  active:scale-95 transition-transform duration-150 select-none"
     >
       {/* Food image */}
       <div className="flex justify-center mb-2">
         <img
-          src={item.image || `https://via.placeholder.com/100x100?text=${encodeURIComponent(item.name)}`}
+          src={item.image_url || `https://via.placeholder.com/100x100?text=${encodeURIComponent(item.name)}`}
           alt={item.name}
           className="w-[100px] h-[100px] rounded-full object-cover border border-neutral-300 shadow"
         />

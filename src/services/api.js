@@ -112,7 +112,18 @@ export const menuAPI = {
     api.get(`/menu/items/${item_id}/reviews`),
  
   postReview: (item_id, { rating, comment }) =>
-    api.post(`/menu/items/${item_id}/reviews`, { rating, comment })
+    api.post(`/menu/items/${item_id}/reviews`, { rating, comment }),
+  createItem: (data) => 
+    api.post('/menu/items', data),
+
+  updateItem: (id, data) => 
+    api.patch(`/menu/items/${id}`, data), // Using PATCH as requested
+
+  deleteItem: (id) => 
+    api.delete(`/menu/items/${id}`), // Using DELETE as requested
+
+  toggleAvailability: (id, data) => 
+    api.patch(`/menu/items/${id}/availability`, data),
 };
 
 export const cartAPI = {
@@ -180,20 +191,15 @@ export const adminOrderAPI = {
 };
 
 export const inventoryAPI = {
-  // Get current stock levels
-  getInventory: () => 
-    api.get('/admin/inventory'),
+  
+  // POST /api/v1/admin/inventory/{item_id}/adjust
+  adjustStock: (itemId, adjustment, notes) => 
+    api.post(`/admin/inventory/${itemId}/adjust`, { adjustment, notes }),
 
-  // Update stock for a specific menu item
-  updateStock: (item_id, in_stock) => 
-    api.patch(`/admin/menu-items/${item_id}`, { in_stock }),
-
-  // Admin version of menu management
-  createMenuItem: (data) => 
-    api.post('/admin/menu-items', data),
-
-  deleteMenuItem: (item_id) => 
-    api.delete(`/admin/menu-items/${item_id}`),
+  // GET /api/v1/admin/inventory/logs/{item_id}
+  getLogs: (itemId) => 
+    api.get(`/admin/inventory/logs/${itemId}`),
 };
+
 
 export default api;
