@@ -24,7 +24,7 @@ const MunchLogo = ({ className = "w-16 h-16" }) => (
 );
 
 const NAV = [
-  { to: '/admin', end: true, label: 'Dashboard', Icon: MdDashboard },
+  { to: '/admin/dashboard', end: true, label: 'Dashboard', Icon: MdDashboard },
   { to: '/admin/orders', end: false, label: 'Orders', Icon: BsCart3 },
   { to: '/admin/menu', end: false, label: 'Menu Manage', Icon: MdOutlineRestaurantMenu },
   { to: '/admin/inventory', end: false, label: 'Inventory', Icon: MdInventory2 },

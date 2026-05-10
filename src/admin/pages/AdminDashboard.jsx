@@ -1,14 +1,14 @@
 import { useState, useEffect } from 'react';
 import AdminLayout from '../layouts/AdminLayout';
-import { adminOrderAPI, menuAPI } from '../../services/api';
+import { adminOrderAPI } from '../../services/api'; 
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis,
   CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from 'recharts';
- 
+
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
- 
-/* ── Stat card ── */
+
+/* ── Stat card component ── */
 function StatCard({ label, value, icon, color, loading }) {
   return (
     <div className="bg-white rounded-[14px] shadow-[0px_4px_4px_0px_rgba(0,0,0,0.04)] p-5 flex items-center gap-4">
@@ -18,15 +18,15 @@ function StatCard({ label, value, icon, color, loading }) {
       <div>
         {loading
           ? <div className="h-10 w-16 bg-gray-200 rounded animate-pulse mb-1" />
-          : <p className="text-[46px] font-bold text-[#464255] leading-none">{value ?? '—'}</p>
+          : <p className="text-[46px] font-bold text-[#464255] leading-none">{value ?? '0'}</p>
         }
         <p className="text-[16px] text-[#464255] mt-1 leading-snug">{label}</p>
       </div>
     </div>
   );
 }
- 
-/* ── Status badge ── */
+
+/* ── Status badge component ── */
 function Badge({ status }) {
   const map = {
     pending:   'bg-blue-100 text-blue-700',
@@ -36,156 +36,162 @@ function Badge({ status }) {
     cancelled: 'bg-red-100 text-red-700',
   };
   return (
-    <span className={`badge ${map[status] || 'bg-gray-100 text-gray-600'}`}>{status}</span>
+    <span className={`px-3 py-1 rounded-full text-xs font-semibold capitalize ${map[status] || 'bg-gray-100 text-gray-600'}`}>
+      {status}
+    </span>
   );
 }
- 
+
 export default function AdminDashboard() {
-  const [stats,   setStats]   = useState({ active: 0, completed: 0, lowStock: 0, revenue: 0 });
-  const [orders,  setOrders]  = useState([]);
+  // Removed lowStock from state, added total
+  const [stats, setStats] = useState({ active: 0, completed: 0, total: 0, revenue: 0 });
+  const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
- 
-  useEffect(() => { load(); }, []);
- 
-  const load = async () => {
+
+  useEffect(() => { 
+    loadDashboardData(); 
+  }, []);
+
+  const loadDashboardData = async () => {
     try {
       setLoading(true);
-      const [ordRes, lowRes] = await Promise.allSettled([
-        adminOrderAPI.getAllOrders(),
-        menuAPI.getLowStock(),
-      ]);
-      const all  = ordRes.status  === 'fulfilled' ? (ordRes.value.data  || []) : [];
-      const low  = lowRes.status  === 'fulfilled' ? (lowRes.value.data  || []) : [];
-      const lowCount = Array.isArray(low) ? low.length : (low?.items?.length ?? 0);
- 
-      const active    = all.filter(o => ['pending','preparing','ready'].includes(o.status)).length;
-      const completed = all.filter(o => o.status === 'completed').length;
-      const revenue   = all.filter(o => o.status === 'completed').reduce((s, o) => s + (o.total || 0), 0);
-      setStats({ active, completed, lowStock: lowCount, revenue });
-      setOrders(all);
-    } catch {}
-    finally { setLoading(false); }
+      
+      // Removed inventoryAPI.getInventory() as requested
+      const ordRes = await adminOrderAPI.getAllOrders(); 
+      const allOrders = ordRes.data?.data || ordRes.data || [];
+      
+      // Calculate Stats based only on Orders
+      const activeCount = allOrders.filter(o => o.status != 'cancelled').length;
+      const completedCount = allOrders.filter(o => o.status === 'completed').length;
+      const totalRevenue = allOrders
+        .filter(o => o.status === 'completed')
+        .reduce((sum, o) => sum + (Number(o.total_amount || o.total) || 0), 0);
+
+      setStats({ 
+        active: activeCount, 
+        completed: completedCount, 
+        total: allOrders.length, // Replaced lowStock with total orders
+        revenue: totalRevenue 
+      });
+      
+      setOrders(allOrders);
+    } catch (error) {
+      console.error("Dashboard Load Error:", error);
+    } finally {
+      setLoading(false);
+    }
   };
- 
-  /* chart data from real orders */
+
+  /* ── Chart Data Processing ── */
   const areaData = DAYS.map((day, i) => {
-    const d = orders.filter(o => new Date(o.created_at).getDay() === i);
-    return { day, orders: d.length, revenue: d.reduce((s, o) => s + (o.total || 0), 0) };
+    const dayOrders = orders.filter(o => new Date(o.created_at).getDay() === i);
+    return { 
+      day, 
+      orders: dayOrders.length, 
+      revenue: dayOrders.reduce((s, o) => s + (Number(o.total_amount || o.total) || 0), 0) 
+    };
   });
- 
+
   const barData = DAYS.map((day, i) => ({
     day,
     completed: orders.filter(o => o.status === 'completed' && new Date(o.created_at).getDay() === i).length,
     cancelled: orders.filter(o => o.status === 'cancelled' && new Date(o.created_at).getDay() === i).length,
   }));
- 
+
   return (
     <AdminLayout title="Dashboard">
- 
-      {/* ── 4 stat cards ── */}
-      <div className="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-5">
-        <StatCard label="Active orders"      value={stats.active}    icon="📋" color="bg-[#e8f5e9]" loading={loading} />
-        <StatCard label="Completed orders"   value={stats.completed} icon="✅" color="bg-[#e3f2fd]" loading={loading} />
-        <StatCard label="Low Stock Items"    value={stats.lowStock}  icon="⚠️" color="bg-[#fff8e1]" loading={loading} />
-        <StatCard label="Total Revenue (Rs)" value={stats.revenue}   icon="💰" color="bg-[#fce4ec]" loading={loading} />
+      {/* Stat Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8">
+        <StatCard label="Active Orders" value={stats.active} icon="📋" color="bg-emerald-50" loading={loading} />
+        <StatCard label="Completed" value={stats.completed} icon="✅" color="bg-blue-50" loading={loading} />
+        {/* Replaced Low Stock with Total Orders */}
+        <StatCard label="Total Orders" value={stats.total} icon="📊" color="bg-amber-50" loading={loading} />
+        <StatCard label="Revenue (Rs)" value={stats.revenue.toLocaleString()} icon="💰" color="bg-rose-50" loading={loading} />
       </div>
- 
-      {/* ── Charts ── */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 mb-5">
- 
-        {/* Area chart */}
-        <div className="xl:col-span-2 bg-white rounded-[14px] shadow-[0px_4px_4px_0px_rgba(0,0,0,0.04)] p-5">
-          <h2 className="text-2xl font-bold text-[#464255] mb-0.5">Chart Order</h2>
-          <p className="text-[16px] text-[#b9bbbd] mb-4">Orders placed each day this week</p>
-          <ResponsiveContainer width="100%" height={200}>
-            <AreaChart data={areaData} margin={{ top: 10, right: 10, left: -15, bottom: 0 }}>
+
+      {/* Charts Section */}
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-8">
+        <div className="xl:col-span-2 bg-white rounded-2xl shadow-sm p-6 border border-neutral-100">
+          <h2 className="text-xl font-bold text-neutral-800 mb-1">Order Analytics</h2>
+          <p className="text-sm text-neutral-400 mb-6">Daily order volume for the current week</p>
+          <ResponsiveContainer width="100%" height={250}>
+            <AreaChart data={areaData}>
               <defs>
-                <linearGradient id="og" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%"  stopColor="#e85a2a" stopOpacity={0.35} />
-                  <stop offset="95%" stopColor="#e85a2a" stopOpacity={0.03} />
+                <linearGradient id="colorOrders" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#e85a2a" stopOpacity={0.1}/>
+                  <stop offset="95%" stopColor="#e85a2a" stopOpacity={0}/>
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis dataKey="day" tick={{ fontSize: 12, fill: '#464255', fontFamily: 'Barlow,sans-serif' }} />
-              <YAxis tick={{ fontSize: 12, fill: '#464255', fontFamily: 'Barlow,sans-serif' }} />
-              <Tooltip contentStyle={{ borderRadius: 10, fontSize: 12, fontFamily: 'Poppins,sans-serif' }} />
-              <Area type="monotone" dataKey="orders" stroke="#e85a2a" strokeWidth={2.5}
-                    fill="url(#og)" dot={{ fill: '#e85a2a', r: 4, stroke: '#fff', strokeWidth: 2 }} />
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+              <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{fill: '#9ca3af', fontSize: 12}} />
+              <YAxis axisLine={false} tickLine={false} tick={{fill: '#9ca3af', fontSize: 12}} />
+              <Tooltip cursor={{stroke: '#e85a2a', strokeWidth: 2}} />
+              <Area type="monotone" dataKey="orders" stroke="#e85a2a" fillOpacity={1} fill="url(#colorOrders)" strokeWidth={3} />
             </AreaChart>
           </ResponsiveContainer>
         </div>
- 
-        {/* Bar chart */}
-        <div className="bg-white rounded-[14px] shadow-[0px_4px_4px_0px_rgba(0,0,0,0.04)] p-5">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold text-[#464255]">Customer Map</h2>
-            <span className="text-xs border border-[#b9bbbd] rounded-xl px-3 py-1 text-[#202020] font-medium">
-              Weekly ▾
-            </span>
-          </div>
-          <ResponsiveContainer width="100%" height={200}>
-            <BarChart data={barData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }} barSize={9} barGap={2}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f3f2f7" vertical={false} />
-              <XAxis dataKey="day" tick={{ fontSize: 11, fill: '#a3a3a3', fontFamily: 'Barlow,sans-serif' }} />
-              <YAxis tick={{ fontSize: 11, fill: '#a3a3a3', fontFamily: 'Barlow,sans-serif' }} />
-              <Tooltip contentStyle={{ borderRadius: 10, fontSize: 12, fontFamily: 'Poppins,sans-serif' }} />
-              <Legend wrapperStyle={{ fontSize: 11, fontFamily: 'Poppins,sans-serif' }} />
-              <Bar dataKey="completed" fill="#f7c604" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="cancelled" fill="#ff5b5b" radius={[4, 4, 0, 0]} />
+
+        <div className="bg-white rounded-2xl shadow-sm p-6 border border-neutral-100">
+          <h2 className="text-xl font-bold text-neutral-800 mb-6">Order Success Rate</h2>
+          <ResponsiveContainer width="100%" height={250}>
+            <BarChart data={barData} barSize={12}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+              <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{fill: '#9ca3af', fontSize: 12}} />
+              <YAxis hide />
+              <Tooltip />
+              <Legend verticalAlign="top" align="right" iconType="circle" />
+              <Bar dataKey="completed" fill="#10b981" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="cancelled" fill="#ef4444" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
       </div>
- 
-      {/* ── Recent orders table ── */}
-      <div className="bg-white rounded-[14px] shadow-[0px_4px_4px_0px_rgba(0,0,0,0.04)] p-5">
-        <h2 className="text-xl font-bold text-[#464255] mb-4">Recent Orders</h2>
+
+      {/* Recent Orders Table */}
+      <div className="bg-white rounded-2xl shadow-sm border border-neutral-100 overflow-hidden">
+        <div className="p-6 border-b border-neutral-100 flex justify-between items-center">
+          <h2 className="text-xl font-bold text-neutral-800">Recent Transactions</h2>
+          <button onClick={loadDashboardData} className="text-primary-600 text-sm font-semibold hover:underline">
+            Refresh Data
+          </button>
+        </div>
         <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="border-b border-gray-100">
+          <table className="w-full text-left">
+            <thead className="bg-neutral-50 text-neutral-500 text-xs uppercase tracking-wider">
               <tr>
-                {['Order ID','Customer','Items','Total','Payment','Status'].map(h => (
-                  <th key={h} className="table-th">{h}</th>
-                ))}
+                <th className="px-6 py-4 font-semibold">Order ID</th>
+                <th className="px-6 py-4 font-semibold">Customer</th>
+                <th className="px-6 py-4 font-semibold">Amount</th>
+                <th className="px-6 py-4 font-semibold">Status</th>
               </tr>
             </thead>
-            <tbody>
-              {loading
-                ? Array(6).fill(0).map((_,i) => (
-                    <tr key={i} className="border-b border-gray-50">
-                      {Array(6).fill(0).map((__,j) => (
-                        <td key={j} className="table-td">
-                          <div className="h-4 bg-gray-200 rounded animate-pulse" />
-                        </td>
-                      ))}
-                    </tr>
-                  ))
-                : orders.slice(0,8).map(o => (
-                    <tr key={o.id || o._id} className="border-b border-gray-50 hover:bg-orange-50 transition-colors">
-                      <td className="table-td font-medium">
-                        #{String(o.id || o._id || '').slice(-6).toUpperCase()}
-                      </td>
-                      <td className="table-td">{o.user?.name || 'Customer'}</td>
-                      <td className="table-td">
-                        <div className="flex flex-col gap-0.5">
-                          {o.items?.slice(0,2).map((it,i) => (
-                            <span key={i} className="text-xs">{it.quantity}× {it.name}</span>
-                          ))}
-                          {(o.items?.length || 0) > 2 && (
-                            <span className="text-xs text-gray-400">+{o.items.length - 2} more</span>
-                          )}
-                        </div>
-                      </td>
-                      <td className="table-td font-semibold text-gray-800">Rs. {o.total}</td>
-                      <td className="table-td capitalize">{o.payment_method}</td>
-                      <td className="table-td"><Badge status={o.status} /></td>
-                    </tr>
-                  ))
-              }
+            <tbody className="divide-y divide-neutral-100">
+              {loading ? (
+                Array(5).fill(0).map((_, i) => (
+                  <tr key={i} className="animate-pulse">
+                    <td colSpan="4" className="px-6 py-4"><div className="h-4 bg-neutral-100 rounded w-full"></div></td>
+                  </tr>
+                ))
+              ) : orders.slice(0, 5).map((order) => (
+                <tr key={order.id} className="hover:bg-neutral-50 transition-colors">
+                  <td className="px-6 py-4 font-mono text-sm text-neutral-600">
+                    #{order.id.toString().slice(-6).toUpperCase()}
+                  </td>
+                  <td className="px-6 py-4 font-medium text-neutral-800">
+                    {order.user_Id || 'Guest User'}
+                  </td>
+                  <td className="px-6 py-4 font-bold text-neutral-900">
+                    Rs. {order.total_amount || order.total}
+                  </td>
+                  <td className="px-6 py-4">
+                    <Badge status={order.status} />
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
           {!loading && orders.length === 0 && (
-            <p className="text-center text-gray-400 py-10 text-sm">No orders yet</p>
+            <div className="text-center py-12 text-neutral-400">No recent orders found.</div>
           )}
         </div>
       </div>

@@ -149,16 +149,7 @@ export const orderAPI = {
   cancelOrder: (order_id) =>
     api.post(`/orders/${order_id}/cancel`),
 };
- 
-/* ════════════════════════════════════════
-   NOTIFICATIONS  –  /api/v1/notifications/*
-   GET  /notifications
-   POST /notifications/mark-read
-   ════════════════════════════════════════ */
-export const notifAPI = {
-  getAll:   () => api.get('/notifications'),
-  markRead: () => api.post('/notifications/mark-read'),
-};
+
  
 /* ── Admin Specific APIs ── */
 export const adminOrderAPI = {
@@ -180,20 +171,27 @@ export const adminOrderAPI = {
 };
 
 export const inventoryAPI = {
-  // Get current stock levels
-  getInventory: () => 
-    api.get('/admin/inventory'),
+  // POST /api/v1/admin/inventory/{item_id}/adjust
+  // Swagger expects { "delta": number, "reason": "string" }
+  adjustStock: (itemId, delta, reason) => 
+    api.post(`/admin/inventory/${itemId}/adjust`, { 
+      delta: Number(delta), 
+      reason: reason 
+    }),
 
-  // Update stock for a specific menu item
-  updateStock: (item_id, in_stock) => 
-    api.patch(`/admin/menu-items/${item_id}`, { in_stock }),
+  // GET /api/v1/admin/inventory/logs/{item_id}
+  getLogs: (itemId) => 
+    api.get(`/admin/inventory/logs/${itemId}`),
+};
 
-  // Admin version of menu management
-  createMenuItem: (data) => 
-    api.post('/admin/menu-items', data),
+export const notifAPI = {
+  // GET /api/v1/notifications?unread_only=false
+  getAll: (unreadOnly = false) => 
+    api.get(`/notifications`, { params: { unread_only: unreadOnly } }),
 
-  deleteMenuItem: (item_id) => 
-    api.delete(`/admin/menu-items/${item_id}`),
+  // POST /api/v1/notifications/mark-read
+  markRead: () => 
+    api.post(`/notifications/mark-read`),
 };
 
 export default api;

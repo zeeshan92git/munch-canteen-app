@@ -41,27 +41,39 @@ export function CartProvider({ children }) {
     }
   };
 
+  
   const updateQuantity = async (cartItemId, quantity) => {
-    // If quantity is 0 or less, remove the item entirely
     if (quantity <= 0) return removeFromCart(cartItemId);
-    
+
     try {
-      const res = await cartAPI.updateItem(cartItemId, quantity);
-      const updatedItems = res.data?.items || res.data?.data?.items || res.data || [];
-      setCartItems(Array.isArray(updatedItems) ? updatedItems : []);
+      await cartAPI.updateItem(cartItemId, quantity);
+
+      // Update locally so the UI feels "snappy"
+      setCartItems(prevItems =>
+        prevItems.map(item =>
+          item.id === cartItemId ? { ...item, quantity } : item
+        )
+      );
     } catch (err) {
-      console.error("Update quantity error:", err);
+      console.error("Update error:", err);
     }
   };
 
   const removeFromCart = async (cartItemId) => {
     try {
-      const res = await cartAPI.removeItem(cartItemId);
-      console.log("Item from cart removed with Id:",cartItemId);
-      const updatedItems = res.data?.items || res.data?.data?.items || res.data || [];
-      setCartItems(Array.isArray(updatedItems) ? updatedItems : []);
+      // 1. Call the API to delete from database
+      await cartAPI.removeItem(cartItemId);
+      console.log("Item removed from server database:", cartItemId);
+
+      // 2. Update local state by filtering out the removed ID
+      // This ensures the UI updates even if the API returns nothing
+      setCartItems(prevItems => prevItems.filter(item => item.id !== cartItemId));
+
+      console.log("Local state updated successfully");
     } catch (err) {
       console.error("Remove item error:", err);
+      // Optional: Re-fetch the cart if the delete fails to ensure sync
+      fetchCart();
     }
   };
 
@@ -81,7 +93,7 @@ export function CartProvider({ children }) {
    * item.menu_item.price contains the unit price.
    */
   const cartCount = cartItems.reduce((sum, item) => sum + (item.quantity || 0), 0);
-  
+
   const subtotal = cartItems.reduce((sum, item) => {
     const price = item.menu_item?.price || 0;
     const qty = item.quantity || 0;
@@ -93,16 +105,16 @@ export function CartProvider({ children }) {
 
   return (
     <CartContext.Provider value={{
-      cartItems, 
-      cartLoading, 
-      cartCount, 
-      subtotal, 
-      tax, 
+      cartItems,
+      cartLoading,
+      cartCount,
+      subtotal,
+      tax,
       total,
-      addToCart, 
-      updateQuantity, 
-      removeFromCart, 
-      clearCart, 
+      addToCart,
+      updateQuantity,
+      removeFromCart,
+      clearCart,
       fetchCart,
     }}>
       {children}

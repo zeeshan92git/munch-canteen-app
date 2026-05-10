@@ -4,7 +4,6 @@ import { AuthProvider } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
 
 /* ── Admin ── */
-import AdminLogin         from './admin/pages/AdminLogin';
 import AdminRoute         from './admin/components/AdminRoute';
 import AdminDashboard     from './admin/pages/AdminDashboard';
 import AdminOrders        from './admin/pages/AdminOrders';
@@ -41,7 +40,6 @@ export default function App() {
 
           <Routes>
             {/* ── Admin routes ── */}
-            <Route path="/admin/login" element={<AdminLogin />} />
             <Route path="/admin/dashboard" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
             <Route path="/admin/orders"        element={<AdminRoute><AdminOrders /></AdminRoute>} />
             <Route path="/admin/menu"          element={<AdminRoute><AdminMenu /></AdminRoute>} />
